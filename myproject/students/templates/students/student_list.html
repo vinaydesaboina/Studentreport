@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Portal</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #fff;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      padding: 30px;
+      margin: 20px auto;
+      max-width: 900px;
+      width: 95%;
+    }
+    input, select, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin: 5px;
+      font-size: 16px;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      width: calc(25% - 20px);
+    }
+    input[type="submit"],
+    input[type="button"],
+    button {
+      background-color: #00bfa5;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover,
+    input[type="submit"]:hover,
+    input[type="button"]:hover {
+      background-color: #008e76;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      text-align: center;
+      color: #fff;
+    }
+    th {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .actions button {
+      margin: 2px;
+      background-color: #ff6f61;
+    }
+    .actions .edit-btn {
+      background-color: #26a69a;
+    }
+    .actions button:hover {
+      opacity: 0.85;
+    }
+    .link, .back-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .hidden { display: none; }
+    @media (max-width: 768px) {
+      input[type="text"],
+      input[type="number"],
+      select {
+        width: calc(100% - 20px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="studentListPage" class="glass">
+  <h1>Student Reports</h1>
+  <form onsubmit="return false;">
+    <input type="text" id="nameFilter" placeholder="Search Name">
+    <input type="number" id="minMarks" placeholder="Min Marks">
+    <input type="number" id="maxMarks" placeholder="Max Marks">
+    <select id="ordering">
+      <option value="roll_asc">Roll No ↑</option>
+      <option value="roll_desc">Roll No ↓</option>
+      <option value="marks_asc">Marks ↑</option>
+      <option value="marks_desc">Marks ↓</option>
+    </select>
+    <input type="button" value="Apply Filter" onclick="applyFilter()">
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Class</th>
+        <th>Roll No</th>
+        <th>Marks</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="studentTableBody"></tbody>
+  </table>
+
+  <div class="link">
+    <button onclick="switchToAdd()">➕ Add New Student</button>
+  </div>
+</div>
+
+<div id="addStudentPage" class="glass hidden">
+  <h2>Add / Edit Student</h2>
+  <form id="studentForm">
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="number" id="age" placeholder="Age" required>
+    <input type="text" id="class" placeholder="Class" required>
+    <input type="number" id="roll" placeholder="Roll No" required>
+    <input type="number" id="marks" step="0.1" placeholder="Marks" required>
+    <br>
+    <button type="submit">Save Student</button>
+  </form>
+  <div class="back-link">
+    <button onclick="switchToList()">← Back to List</button>
+  </div>
+</div>
+
+<script>
+  const tableBody = document.getElementById("studentTableBody");
+  const form = document.getElementById("studentForm");
+  const listPage = document.getElementById("studentListPage");
+  const addPage = document.getElementById("addStudentPage");
+  let editIndex = null;
+
+  form.onsubmit = function (e) {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const age = document.getElementById("age").value.trim();
+    const cls = document.getElementById("class").value.trim();
+    const roll = document.getElementById("roll").value.trim();
+    const marks = document.getElementById("marks").value.trim();
+
+    if (editIndex === null) {
+      const existingRolls = Array.from(tableBody.querySelectorAll("tr")).map(row => row.children[3].innerText);
+      if (existingRolls.includes(roll)) {
+        alert("Roll number must be unique.");
+        return;
+      }
+      const row = createRow(name, age, cls, roll, marks);
+      tableBody.appendChild(row);
+    } else {
+      const row = tableBody.children[editIndex];
+      row.children[0].innerText = name;
+      row.children[1].innerText = age;
+      row.children[2].innerText = cls;
+      row.children[3].innerText = roll;
+      row.children[4].innerText = marks;
+      editIndex = null;
+    }
+
+    saveData();
+    form.reset();
+    switchToList();
+  };
+
+  function createRow(name, age, cls, roll, marks) {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${name}</td>
+      <td>${age}</td>
+      <td>${cls}</td>
+      <td>${roll}</td>
+      <td>${marks}</td>
+      <td class="actions">
+        <button class="edit-btn" onclick="editRow(this)">Edit</button>
+        <button onclick="deleteRow(this)">Delete</button>
+      </td>
+    `;
+    return row;
+  }
+
+  function deleteRow(btn) {
+    if (confirm("Delete this student?")) {
+      const row = btn.closest("tr");
+      row.remove();
+      saveData();
+    }
+  }
+
+  function editRow(btn) {
+    const row = btn.closest("tr");
+    editIndex = Array.from(tableBody.children).indexOf(row);
+    document.getElementById("name").value = row.children[0].innerText;
+    document.getElementById("age").value = row.children[1].innerText;
+    document.getElementById("class").value = row.children[2].innerText;
+    document.getElementById("roll").value = row.children[3].innerText;
+    document.getElementById("marks").value = row.children[4].innerText;
+    document.getElementById("roll").disabled = false;
+    switchToAdd();
+  }
+
+  function applyFilter() {
+    const nameVal = document.getElementById("nameFilter").value.toLowerCase();
+    const minMarks = parseFloat(document.getElementById("minMarks").value);
+    const maxMarks = parseFloat(document.getElementById("maxMarks").value);
+    const ordering = document.getElementById("ordering").value;
+
+    const rows = Array.from(tableBody.querySelectorAll("tr"));
+    const filtered = rows.filter(row => {
+      const name = row.children[0].innerText.toLowerCase();
+      const marks = parseFloat(row.children[4].innerText);
+      return (!nameVal || name.includes(nameVal)) &&
+             (isNaN(minMarks) || marks >= minMarks) &&
+             (isNaN(maxMarks) || marks <= maxMarks);
+    });
+
+    filtered.sort((a, b) => {
+      const idx = ordering.includes("roll") ? 3 : 4;
+      const aVal = parseFloat(a.children[idx].innerText);
+      const bVal = parseFloat(b.children[idx].innerText);
+      return ordering.includes("desc") ? bVal - aVal : aVal - bVal;
+    });
+
+    tableBody.innerHTML = "";
+    if (filtered.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="6">No students found.</td></tr>`;
+    } else {
+      filtered.forEach(row => tableBody.appendChild(row));
+    }
+  }
+
+  function switchToAdd() {
+    listPage.classList.add("hidden");
+    addPage.classList.remove("hidden");
+  }
+
+  function switchToList() {
+    addPage.classList.add("hidden");
+    listPage.classList.remove("hidden");
+  }
+
+  function saveData() {
+    const data = Array.from(tableBody.querySelectorAll("tr")).map(row => ({
+      name: row.children[0].innerText,
+      age: row.children[1].innerText,
+      class: row.children[2].innerText,
+      roll: row.children[3].innerText,
+      marks: row.children[4].innerText
+    }));
+    localStorage.setItem("students", JSON.stringify(data));
+  }
+
+  function loadData() {
+    const data = JSON.parse(localStorage.getItem("students") || "[]");
+    data.forEach(s => {
+      const row = createRow(s.name, s.age, s.class, s.roll, s.marks);
+      tableBody.appendChild(row);
+    });
+  }
+
+  window.addEventListener("load", loadData);
+</script>
+
+</body>
+</html>
